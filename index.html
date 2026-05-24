@@ -661,6 +661,18 @@ function mostrarFeedback(res) {
 function mostrarCierre() {
   document.getElementById('cierre').className = 'cierre show';
   document.getElementById('scanner-box').style.display = 'none';
+
+  // Notificar a la ventana padre (app MC Logística) que el picking terminó
+  if (window.opener && !window.opener.closed) {
+    window.opener.postMessage(
+      { tipo: 'picking_completo', idPedido: pedidoActual },
+      '*'
+    );
+    // Cerrar esta pestaña después de 3 segundos
+    setTimeout(function() {
+      window.close();
+    }, 3000);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -760,9 +772,44 @@ document.getElementById('cant-mas').addEventListener('click', function() {
 });
 
 // ═══════════════════════════════════════════════════════════
-//  INICIO
+//  INICIO — leer parámetros de la URL
 // ═══════════════════════════════════════════════════════════
-cargarPedidos();
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var pedidoId  = params.get('pedido');
+  var pedidoDoc = params.get('doc');
+
+  if (pedidoId) {
+    // Vino con pedido preseleccionado — ir directo al picking
+    // Mostrar pantalla de picking inmediatamente
+    mostrarPantalla('screen-picking');
+    document.getElementById('pick-doc').textContent = pedidoDoc || pedidoId;
+    document.getElementById('pick-cli').textContent = 'Cargando...';
+    pedidoActual = pedidoId;
+
+    // Cargar detalle del pedido
+    api({ action: 'detalle', id: pedidoId })
+      .then(function(items) {
+        itemsActuales = items || [];
+        renderItems();
+        actualizarProgreso();
+        // Actualizar cliente desde la lista
+        api({ action: 'pedidos' }).then(function(pedidos) {
+          var p = (pedidos || []).filter(function(x) { return x.id === pedidoId; })[0];
+          if (p) document.getElementById('pick-cli').textContent = p.cliente;
+        }).catch(function() {});
+      })
+      .catch(function(err) {
+        document.getElementById('lista-items').innerHTML =
+          '<div class="empty"><div class="icon">⚠️</div><div class="titulo">Error</div><div class="sub">' + err.message + '</div></div>';
+      });
+  } else {
+    // Sin pedido — mostrar lista normal
+    cargarPedidos();
+  }
+})();
+
+cargarPedidos;
 </script>
 </body>
 </html>
