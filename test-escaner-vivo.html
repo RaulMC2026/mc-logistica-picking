@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Escáner en vivo — MC Logística</title>
+<style>
+  :root{
+    --accent:#1d4ed8; --accent-bg:#eff6ff; --txt:#101828; --txt2:#475467;
+    --txt3:#98a2b3; --border:#e4e7ec; --ok:#027a48; --ok-bg:#ecfdf3;
+    --bad:#b42318; --bad-bg:#fef3f2; --radius:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:'DM Sans',system-ui,sans-serif;-webkit-tap-highlight-color:transparent;}
+  body{background:#f4f5f7;color:var(--txt);padding:16px;max-width:520px;margin:0 auto;}
+  h1{font-size:18px;margin-bottom:2px;}
+  .sub{font-size:12px;color:var(--txt3);margin-bottom:16px;}
+
+  .btn{
+    width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
+    padding:18px;font-size:17px;font-weight:700;border:none;border-radius:var(--radius);
+    cursor:pointer;color:#fff;
+  }
+  .btn:active{transform:scale(.985);}
+  .btn-azul{background:var(--accent);box-shadow:0 2px 6px rgba(29,78,216,.3);}
+  .btn-verde{background:var(--ok);box-shadow:0 2px 6px rgba(2,122,72,.3);}
+  .btn-gris{background:#fff;color:var(--txt2);border:1px solid var(--border);box-shadow:none;font-size:15px;padding:14px;}
+
+  /* Cámara */
+  #vistaCamara{display:none;}
+  .cam-box{position:relative;width:100%;border-radius:var(--radius);overflow:hidden;
+    background:#000;aspect-ratio:3/4;}
+  video{width:100%;height:100%;object-fit:cover;display:block;}
+  .marco{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:78%;height:34%;border:3px solid rgba(255,255,255,.9);border-radius:10px;
+    box-shadow:0 0 0 2000px rgba(0,0,0,.35);}
+  .marco::after{content:'Apunta al código de barras';position:absolute;left:0;right:0;
+    bottom:-30px;text-align:center;color:#fff;font-size:13px;font-weight:600;
+    text-shadow:0 1px 3px rgba(0,0,0,.6);}
+  .cam-cancel{margin-top:12px;}
+
+  /* Confirmación */
+  #vistaConfirma{display:none;}
+  .leido{background:var(--ok-bg);border:1px solid #a6e9c3;border-radius:var(--radius);
+    padding:16px;text-align:center;margin-bottom:18px;}
+  .leido .lbl{font-size:12px;color:var(--ok);font-weight:600;}
+  .leido .cod{font-family:'DM Mono',monospace;font-weight:700;font-size:26px;
+    letter-spacing:.5px;color:var(--txt);margin-top:4px;word-break:break-all;}
+  .cant-row{display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:18px;}
+  .cant-row label{font-size:13px;font-weight:600;color:var(--txt2);}
+  .cant-ctrl{display:flex;align-items:center;gap:0;border:1px solid var(--border);
+    border-radius:10px;overflow:hidden;background:#fff;}
+  .cant-ctrl button{width:52px;height:52px;border:none;background:#fff;font-size:26px;
+    font-weight:700;color:var(--accent);cursor:pointer;}
+  .cant-ctrl button:active{background:var(--accent-bg);}
+  .cant-ctrl input{width:72px;height:52px;border:none;border-left:1px solid var(--border);
+    border-right:1px solid var(--border);text-align:center;font-size:22px;font-weight:700;
+    font-family:'DM Mono',monospace;color:var(--txt);}
+  .acciones{display:flex;flex-direction:column;gap:10px;}
+
+  /* Lista */
+  .lista{margin-top:22px;}
+  .lista h2{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--txt3);margin-bottom:8px;}
+  .item{display:flex;justify-content:space-between;align-items:center;padding:11px 13px;
+    background:#fff;border:1px solid var(--border);border-radius:9px;margin-bottom:6px;font-size:14px;}
+  .item .c{font-family:'DM Mono',monospace;font-weight:600;}
+  .item .q{font-size:12px;font-weight:700;color:var(--accent);background:var(--accent-bg);
+    padding:2px 9px;border-radius:20px;}
+
+  .aviso{margin-top:14px;padding:13px;border-radius:10px;font-size:13px;
+    background:var(--bad-bg);border:1px solid #fbc8c2;color:var(--bad);display:none;}
+  .diag{margin-top:18px;font-size:11px;color:var(--txt3);line-height:1.6;
+    background:#fff;border:1px dashed var(--border);border-radius:8px;padding:10px 12px;}
+</style>
+</head>
+<body>
+
+<h1>Escáner en vivo</h1>
+<div class="sub">Detección automática — apunta y lee solo, sin tomar foto</div>
+
+<!-- INICIO -->
+<div id="vistaInicio">
+  <button class="btn btn-azul" id="btnIniciar">📷 Escanear código</button>
+  <div class="aviso" id="aviso"></div>
+</div>
+
+<!-- CÁMARA -->
+<div id="vistaCamara">
+  <div class="cam-box">
+    <video id="video" playsinline muted></video>
+    <div class="marco"></div>
+  </div>
+  <button class="btn btn-gris cam-cancel" id="btnCancelar">Cancelar</button>
+</div>
+
+<!-- CONFIRMACIÓN DE CANTIDAD -->
+<div id="vistaConfirma">
+  <div class="leido">
+    <div class="lbl">✓ Código leído</div>
+    <div class="cod" id="codLeido">—</div>
+  </div>
+  <div class="cant-row">
+    <label>Cantidad</label>
+    <div class="cant-ctrl">
+      <button id="btnMenos">−</button>
+      <input type="number" id="inpCant" value="1" min="1" inputmode="numeric">
+      <button id="btnMas">+</button>
+    </div>
+  </div>
+  <div class="acciones">
+    <button class="btn btn-verde" id="btnConfirmar">✓ Confirmar y validar</button>
+    <button class="btn btn-gris" id="btnOtro">Escanear otro</button>
+  </div>
+</div>
+
+<!-- LISTA -->
+<div class="lista">
+  <h2>Validados en esta sesión</h2>
+  <div id="lista"></div>
+</div>
+
+<div class="diag" id="diag">Cargando diagnóstico…</div>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var FORMATOS = ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','codabar','qr_code'];
+
+  var stream=null, escaneando=false, detector=null, audioCtx=null, codigoActual=null;
+
+  var vInicio=$('vistaInicio'), vCamara=$('vistaCamara'), vConfirma=$('vistaConfirma');
+
+  function mostrar(v){
+    vInicio.style.display   = (v==='inicio')   ? 'block':'none';
+    vCamara.style.display   = (v==='camara')   ? 'block':'none';
+    vConfirma.style.display = (v==='confirma') ? 'block':'none';
+  }
+
+  // ── Beep con WebAudio (no necesita archivo) ──
+  function beep(){
+    if(!audioCtx) return;
+    try{
+      var o=audioCtx.createOscillator(), g=audioCtx.createGain();
+      o.type='square'; o.frequency.value=880; g.gain.value=0.12;
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(); o.stop(audioCtx.currentTime+0.15);
+    }catch(e){}
+  }
+
+  // ── Iniciar cámara y escaneo en vivo ──
+  $('btnIniciar').addEventListener('click', iniciar);
+  $('btnOtro').addEventListener('click', iniciar);
+
+  function iniciar(){
+    $('aviso').style.display='none';
+
+    // El AudioContext debe crearse tras un gesto del usuario
+    if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+    if(audioCtx && audioCtx.state==='suspended') audioCtx.resume();
+
+    if(!('BarcodeDetector' in window)){
+      avisar('Este navegador no tiene lector nativo. Ábrelo en Chrome de Android.');
+      return;
+    }
+
+    BarcodeDetector.getSupportedFormats().then(function(sop){
+      var usar=FORMATOS.filter(function(x){ return sop.indexOf(x)!==-1; });
+      detector=new BarcodeDetector({formats:usar});
+      return navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280}},audio:false});
+    }).then(function(s){
+      stream=s;
+      var video=$('video');
+      video.srcObject=stream;
+      return video.play();
+    }).then(function(){
+      mostrar('camara');
+      escaneando=true;
+      requestAnimationFrame(loop);
+    }).catch(function(e){
+      avisar('No se pudo abrir la cámara: '+(e && e.message ? e.message : e)+'. Revisa el permiso de cámara.');
+    });
+  }
+
+  // ── Bucle de detección sobre el video ──
+  function loop(){
+    if(!escaneando || !detector){ return; }
+    var video=$('video');
+    detector.detect(video).then(function(cods){
+      if(!escaneando) return;
+      if(cods && cods.length){ onDetectar(cods[0].rawValue); }
+      else { requestAnimationFrame(loop); }
+    }).catch(function(){
+      // errores de frame puntuales: seguimos
+      if(escaneando) requestAnimationFrame(loop);
+    });
+  }
+
+  // ── Al detectar un código ──
+  function onDetectar(texto){
+    escaneando=false;
+    beep();
+    if(navigator.vibrate) navigator.vibrate(120);
+    detenerCamara();
+    codigoActual=texto;
+    $('codLeido').textContent=texto;
+    $('inpCant').value=1;
+    mostrar('confirma');
+  }
+
+  function detenerCamara(){
+    if(stream){ stream.getTracks().forEach(function(t){ t.stop(); }); stream=null; }
+    var video=$('video'); if(video) video.srcObject=null;
+  }
+
+  $('btnCancelar').addEventListener('click', function(){
+    escaneando=false; detenerCamara(); mostrar('inicio');
+  });
+
+  // ── Control de cantidad ──
+  $('btnMenos').addEventListener('click', function(){
+    var v=parseInt($('inpCant').value,10)||1; if(v>1) $('inpCant').value=v-1;
+  });
+  $('btnMas').addEventListener('click', function(){
+    var v=parseInt($('inpCant').value,10)||1; $('inpCant').value=v+1;
+  });
+
+  // ── Confirmar ──
+  $('btnConfirmar').addEventListener('click', function(){
+    var cant=parseInt($('inpCant').value,10)||1; if(cant<1) cant=1;
+    agregarLista(codigoActual, cant);
+
+    // ====== AQUÍ irá la conexión real al backend ======
+    // En la app integrada, esta es la llamada a tu Picking.gs:
+    //   registrarPicking(idPedido, codigoActual, cant)
+    // ===================================================
+
+    mostrar('inicio');
+  });
+
+  function agregarLista(cod, cant){
+    var it=document.createElement('div');
+    it.className='item';
+    it.innerHTML='<span class="c">'+cod+'</span><span class="q">× '+cant+'</span>';
+    $('lista').insertBefore(it, $('lista').firstChild);
+  }
+
+  function avisar(msg){
+    var a=$('aviso'); a.textContent='⚠️ '+msg; a.style.display='block';
+  }
+
+  // ── Diagnóstico ──
+  if('BarcodeDetector' in window){
+    BarcodeDetector.getSupportedFormats().then(function(s){
+      $('diag').innerHTML='Lector nativo: <b>disponible</b> · escaneo en vivo activo<br>Formatos: '+s.join(', ');
+    });
+  } else {
+    $('diag').innerHTML='Lector nativo: <b>no disponible</b> en este navegador.';
+  }
+
+  mostrar('inicio');
+})();
+</script>
+</body>
+</html>
