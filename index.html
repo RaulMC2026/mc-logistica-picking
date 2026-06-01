@@ -10,6 +10,7 @@
   <title>MC Picking</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Respaldo para teléfonos sin BarcodeDetector nativo (ej. iOS Safari) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -38,316 +39,136 @@
     }
 
     /* ── PANTALLAS ── */
-    .screen {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      transition: opacity 0.2s, transform 0.2s;
-    }
-    .screen.hidden {
-      opacity: 0;
-      pointer-events: none;
-      transform: translateX(20px);
-    }
+    .screen { position: fixed; inset: 0; display: flex; flex-direction: column; overflow: hidden; transition: opacity 0.2s, transform 0.2s; }
+    .screen.hidden { opacity: 0; pointer-events: none; transform: translateX(20px); }
 
     /* ── TOPBAR ── */
-    .topbar {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 14px 16px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-shrink: 0;
-    }
-    .topbar-logo {
-      width: 30px; height: 30px;
-      background: linear-gradient(135deg, #3b82f6, #6366f1);
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-    }
+    .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 16px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    .topbar-logo { width: 30px; height: 30px; background: linear-gradient(135deg, #3b82f6, #6366f1); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
     .topbar-logo svg { width: 16px; height: 16px; }
     .topbar-title { font-size: 15px; font-weight: 700; flex: 1; }
-    .topbar-back {
-      background: none; border: none; color: var(--accent);
-      font-size: 14px; font-weight: 600; cursor: pointer;
-      font-family: inherit; padding: 4px 8px;
-    }
+    .topbar-back { background: none; border: none; color: var(--accent); font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; padding: 4px 8px; }
     .topbar-sub { font-size: 11px; color: var(--txt3); }
 
     /* ── SCROLL CONTENT ── */
-    .content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px;
-      -webkit-overflow-scrolling: touch;
-    }
+    .content { flex: 1; overflow-y: auto; padding: 16px; -webkit-overflow-scrolling: touch; }
 
     /* ── PEDIDO CARD ── */
-    .pedido-card {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px 16px;
-      margin-bottom: 10px;
-      cursor: pointer;
-      transition: border-color 0.15s;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
+    .pedido-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; cursor: pointer; transition: border-color 0.15s; display: flex; align-items: center; gap: 12px; }
     .pedido-card:active { border-color: var(--accent); }
-    .pedido-card-icon {
-      width: 40px; height: 40px;
-      background: rgba(59,130,246,0.12);
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; font-size: 18px;
-    }
+    .pedido-card-icon { width: 40px; height: 40px; background: rgba(59,130,246,0.12); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 18px; }
     .pedido-card-info { flex: 1; min-width: 0; }
-    .pedido-doc {
-      font-size: 13px; font-weight: 700;
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--accent); margin-bottom: 2px;
-    }
-    .pedido-cliente {
-      font-size: 13px; color: var(--txt);
-      font-weight: 500; white-space: nowrap;
-      overflow: hidden; text-overflow: ellipsis;
-    }
+    .pedido-doc { font-size: 13px; font-weight: 700; font-family: 'JetBrains Mono', monospace; color: var(--accent); margin-bottom: 2px; }
+    .pedido-cliente { font-size: 13px; color: var(--txt); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .pedido-meta { font-size: 11px; color: var(--txt3); margin-top: 2px; }
     .pedido-arrow { color: var(--txt3); font-size: 18px; }
 
     /* ── EMPTY STATE ── */
-    .empty {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--txt3);
-    }
+    .empty { text-align: center; padding: 60px 20px; color: var(--txt3); }
     .empty .icon { font-size: 48px; margin-bottom: 12px; }
     .empty .titulo { font-size: 16px; font-weight: 600; color: var(--txt2); margin-bottom: 6px; }
     .empty .sub { font-size: 13px; line-height: 1.5; }
 
     /* ── LOADING ── */
-    .loading {
-      display: flex; align-items: center; justify-content: center;
-      padding: 60px 20px; gap: 10px; color: var(--txt3); font-size: 14px;
-    }
-    .spinner {
-      width: 20px; height: 20px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-    }
+    .loading { display: flex; align-items: center; justify-content: center; padding: 60px 20px; gap: 10px; color: var(--txt3); font-size: 14px; }
+    .spinner { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* ── PICKING SCREEN ── */
-    .pedido-header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 12px 16px;
-      flex-shrink: 0;
-    }
-    .pedido-header-doc {
-      font-size: 13px; font-weight: 700;
-      color: var(--accent); font-family: 'JetBrains Mono', monospace;
-    }
+    .pedido-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 16px; flex-shrink: 0; }
+    .pedido-header-doc { font-size: 13px; font-weight: 700; color: var(--accent); font-family: 'JetBrains Mono', monospace; }
     .pedido-header-cli { font-size: 14px; font-weight: 600; color: var(--txt); }
 
     /* ── PROGRESO ── */
-    .progreso-wrap {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 10px 16px;
-      flex-shrink: 0;
-    }
-    .progreso-bar-bg {
-      height: 6px; background: var(--border);
-      border-radius: 10px; overflow: hidden; margin-bottom: 4px;
-    }
-    .progreso-bar-fill {
-      height: 100%; border-radius: 10px;
-      background: linear-gradient(90deg, var(--accent), #6366f1);
-      transition: width 0.4s ease;
-    }
-    .progreso-txt {
-      font-size: 11px; color: var(--txt3); text-align: right;
-    }
+    .progreso-wrap { background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 16px; flex-shrink: 0; }
+    .progreso-bar-bg { height: 6px; background: var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 4px; }
+    .progreso-bar-fill { height: 100%; border-radius: 10px; background: linear-gradient(90deg, var(--accent), #6366f1); transition: width 0.4s ease; }
+    .progreso-txt { font-size: 11px; color: var(--txt3); text-align: right; }
 
     /* ── SCANNER BOX ── */
-    .scanner-box {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px;
-      margin-bottom: 14px;
-    }
-    .scanner-label {
-      font-size: 10px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.8px;
-      color: var(--txt3); margin-bottom: 10px;
-    }
-    .scanner-input-row {
-      display: flex; gap: 8px; margin-bottom: 10px;
-    }
-    .scanner-input {
-      flex: 1;
-      background: var(--surface);
-      border: 1.5px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 14px;
-      font-size: 16px; /* evita zoom en iOS */
-      color: var(--txt);
-      font-family: 'JetBrains Mono', monospace;
-      outline: none;
-    }
+    .scanner-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+    .scanner-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--txt3); margin-bottom: 10px; }
+    .scanner-input-row { display: flex; gap: 8px; margin-bottom: 10px; }
+    .scanner-input { flex: 1; background: var(--surface); border: 1.5px solid var(--border); border-radius: 8px; padding: 12px 14px; font-size: 16px; color: var(--txt); font-family: 'JetBrains Mono', monospace; outline: none; }
     .scanner-input:focus { border-color: var(--accent); }
-    .btn-camara {
-      width: 48px; height: 48px;
-      background: var(--surface);
-      border: 1.5px solid var(--border);
-      border-radius: 8px;
-      color: var(--txt2);
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; flex-shrink: 0;
-      transition: all 0.15s;
-    }
+    .btn-camara { min-width: 48px; height: 48px; padding: 0 12px; background: var(--accent); border: none; border-radius: 8px; color: #fff; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; flex-shrink: 0; font-family: inherit; font-weight: 700; font-size: 13px; }
     .btn-camara svg { width: 22px; height: 22px; }
-    .btn-camara.activa { border-color: var(--success); color: var(--success); }
 
-    /* ── CANTIDAD ── */
-    .cantidad-row {
-      display: flex; align-items: center; gap: 10px;
-      margin-bottom: 10px;
-    }
+    /* ── CANTIDAD (manual / pistola) ── */
+    .cantidad-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
     .cantidad-label { font-size: 12px; color: var(--txt2); }
     .cantidad-ctrl { display: flex; align-items: center; gap: 6px; }
-    .cant-btn {
-      width: 34px; height: 34px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--txt); font-size: 18px; font-weight: 700;
-      cursor: pointer; font-family: inherit; line-height: 1;
-    }
-    .cant-input {
-      width: 60px; height: 34px;
-      text-align: center; border-radius: 8px;
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--txt); font-size: 16px; font-weight: 700;
-      font-family: 'JetBrains Mono', monospace; outline: none;
-    }
+    .cant-btn { width: 34px; height: 34px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--txt); font-size: 18px; font-weight: 700; cursor: pointer; font-family: inherit; line-height: 1; }
+    .cant-input { width: 60px; height: 34px; text-align: center; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); color: var(--txt); font-size: 16px; font-weight: 700; font-family: 'JetBrains Mono', monospace; outline: none; }
 
     /* ── BOTÓN VALIDAR ── */
-    .btn-validar {
-      width: 100%; padding: 14px;
-      background: var(--accent); color: white;
-      border: none; border-radius: 10px;
-      font-size: 15px; font-weight: 700;
-      cursor: pointer; font-family: inherit;
-      transition: background 0.15s;
-    }
+    .btn-validar { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; transition: background 0.15s; }
     .btn-validar:active { background: #2563eb; }
     .btn-validar:disabled { background: var(--border); color: var(--txt3); }
 
     /* ── FEEDBACK ── */
-    .feedback {
-      padding: 10px 14px; border-radius: 8px;
-      font-size: 13px; font-weight: 600;
-      margin-bottom: 10px; display: none;
-    }
+    .feedback { padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; margin-bottom: 10px; display: none; }
     .feedback.ok    { display: block; background: rgba(34,197,94,0.12); color: #4ade80; }
     .feedback.error { display: block; background: rgba(239,68,68,0.12); color: #f87171; }
     .feedback.warn  { display: block; background: rgba(245,158,11,0.12); color: #fbbf24; }
 
-    /* ── VISOR CÁMARA ── */
-    .camara-wrap {
-      display: none;
-      margin-bottom: 10px;
-      border-radius: 10px;
-      overflow: hidden;
-      background: #000;
-    }
-    .camara-wrap.show { display: block; }
-    #camara-container { width: 100%; }
-    .camara-footer {
-      display: flex; justify-content: space-between;
-      align-items: center; padding: 8px 0;
-    }
-    .camara-hint { font-size: 11px; color: var(--txt3); }
-    .btn-cerrar-cam {
-      background: none; border: 1px solid var(--border);
-      border-radius: 6px; color: var(--txt2);
-      padding: 4px 10px; font-size: 11px;
-      cursor: pointer; font-family: inherit;
-    }
-
     /* ── ITEMS ── */
-    .items-label {
-      font-size: 10px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.8px;
-      color: var(--txt3); margin-bottom: 8px;
-    }
-    .item-row {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 14px;
-      margin-bottom: 8px;
-      display: flex; align-items: center; gap: 10px;
-    }
+    .items-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--txt3); margin-bottom: 8px; }
+    .item-row { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
     .item-row.ok { border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.05); }
     .item-row.parcial { border-color: rgba(245,158,11,0.3); }
     .item-icon { font-size: 20px; flex-shrink: 0; }
     .item-info { flex: 1; min-width: 0; }
-    .item-desc {
-      font-size: 13px; font-weight: 600; color: var(--txt);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
+    .item-desc { font-size: 13px; font-weight: 600; color: var(--txt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .item-codigo { font-size: 11px; color: var(--txt3); font-family: 'JetBrains Mono', monospace; }
     .item-counter { text-align: right; flex-shrink: 0; }
-    .item-n {
-      font-size: 20px; font-weight: 800;
-      font-family: 'JetBrains Mono', monospace; line-height: 1;
-    }
+    .item-n { font-size: 20px; font-weight: 800; font-family: 'JetBrains Mono', monospace; line-height: 1; }
     .item-n.ok  { color: #4ade80; }
     .item-n.mid { color: #fbbf24; }
     .item-n.no  { color: var(--txt3); }
     .item-d { font-size: 11px; color: var(--txt3); }
 
     /* ── CIERRE ── */
-    .cierre {
-      display: none;
-      background: linear-gradient(135deg, #161a23, #1e2330);
-      border: 1px solid rgba(34,197,94,0.3);
-      border-radius: 14px;
-      padding: 24px;
-      text-align: center;
-      margin-bottom: 14px;
-    }
+    .cierre { display: none; background: linear-gradient(135deg, #161a23, #1e2330); border: 1px solid rgba(34,197,94,0.3); border-radius: 14px; padding: 24px; text-align: center; margin-bottom: 14px; }
     .cierre.show { display: block; }
     .cierre .emoji { font-size: 48px; margin-bottom: 10px; }
     .cierre h3 { font-size: 18px; font-weight: 800; color: #4ade80; margin-bottom: 6px; }
     .cierre p { font-size: 13px; color: var(--txt2); margin-bottom: 16px; }
-    .btn-nuevo {
-      padding: 12px 28px;
-      background: var(--success); color: white;
-      border: none; border-radius: 10px;
-      font-size: 14px; font-weight: 700;
-      cursor: pointer; font-family: inherit;
-    }
+    .btn-nuevo { padding: 12px 28px; background: var(--success); color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
 
     /* ── REFRESH BTN ── */
-    .btn-refresh {
-      display: flex; align-items: center; justify-content: center;
-      gap: 6px; width: 36px; height: 36px;
-      background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 8px; cursor: pointer; color: var(--txt2);
-    }
+    .btn-refresh { display: flex; align-items: center; justify-content: center; gap: 6px; width: 36px; height: 36px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; color: var(--txt2); }
     .btn-refresh svg { width: 16px; height: 16px; }
+
+    /* ── OVERLAY CÁMARA (escáner en vivo) ── */
+    .cam-overlay { position: fixed; inset: 0; z-index: 1000; background: #000; display: none; flex-direction: column; }
+    .cam-overlay.show { display: flex; }
+    .cam-top { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: rgba(0,0,0,.6); color: #fff; flex-shrink: 0; position: relative; z-index: 2; }
+    .cam-top .t { font-size: 15px; font-weight: 700; }
+    .cam-top button { background: none; border: 1px solid rgba(255,255,255,.4); color: #fff; border-radius: 8px; padding: 7px 16px; font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; }
+    .cam-view { position: relative; flex: 1; overflow: hidden; background: #000; }
+    #cam-video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    #cam-lib { width: 100%; height: 100%; }
+    .cam-marco { position: absolute; top: 46%; left: 50%; transform: translate(-50%,-50%); width: 80%; height: 28%; border: 3px solid rgba(255,255,255,.9); border-radius: 12px; box-shadow: 0 0 0 2000px rgba(0,0,0,.4); pointer-events: none; }
+    .cam-hint { position: absolute; left: 0; right: 0; bottom: 22px; text-align: center; color: #fff; font-size: 14px; font-weight: 600; text-shadow: 0 1px 4px rgba(0,0,0,.7); pointer-events: none; }
+    .cam-toast { position: absolute; top: 68px; left: 16px; right: 16px; z-index: 3; padding: 12px 14px; border-radius: 10px; font-size: 14px; font-weight: 700; text-align: center; display: none; }
+    .cam-toast.ok    { display: block; background: rgba(34,197,94,.96); color: #052012; }
+    .cam-toast.error { display: block; background: rgba(239,68,68,.96); color: #fff; }
+    .cam-toast.warn  { display: block; background: rgba(245,158,11,.96); color: #2a1a00; }
+
+    .cam-confirm { position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; background: var(--surface); border-top: 1px solid var(--border); border-radius: 18px 18px 0 0; padding: 20px 18px calc(20px + env(safe-area-inset-bottom)); transform: translateY(115%); transition: transform .22s ease; }
+    .cam-confirm.show { transform: translateY(0); }
+    .cam-confirm .lbl { font-size: 12px; color: var(--success); font-weight: 700; text-align: center; }
+    .cam-confirm .cod { font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 26px; text-align: center; margin: 6px 0 16px; color: var(--txt); word-break: break-all; }
+    .cam-cant-row { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 16px; }
+    .cam-cant-row .lab { font-size: 14px; color: var(--txt2); font-weight: 600; }
+    .cam-cant-ctrl { display: flex; align-items: center; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--bg); }
+    .cam-cant-ctrl button { width: 54px; height: 54px; border: none; background: var(--surface2); color: var(--accent); font-size: 28px; font-weight: 700; cursor: pointer; }
+    .cam-cant-ctrl input { width: 74px; height: 54px; text-align: center; border: none; background: var(--surface); color: var(--txt); font-size: 24px; font-weight: 800; font-family: 'JetBrains Mono', monospace; outline: none; border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+    .cam-acc { display: flex; flex-direction: column; gap: 10px; }
+    .cam-acc button { width: 100%; padding: 15px; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer; }
+    .cam-acc .conf { background: var(--success); color: #052012; }
+    .cam-acc .otro { background: var(--surface2); color: var(--txt2); border: 1px solid var(--border); }
   </style>
 </head>
 <body>
@@ -419,19 +240,11 @@
             <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
             <circle cx="12" cy="13" r="4"/>
           </svg>
+          Cámara
         </button>
       </div>
 
-      <!-- Visor cámara -->
-      <div class="camara-wrap" id="camara-wrap">
-        <div id="camara-container"></div>
-        <div class="camara-footer">
-          <span class="camara-hint">📷 Apunta al código</span>
-          <button class="btn-cerrar-cam" id="btn-cerrar-cam">Cerrar</button>
-        </div>
-      </div>
-
-      <!-- Cantidad -->
+      <!-- Cantidad (modo manual / pistola Bluetooth) -->
       <div class="cantidad-row">
         <span class="cantidad-label">Cantidad:</span>
         <div class="cantidad-ctrl">
@@ -455,9 +268,41 @@
   </div>
 </div>
 
+<!-- ── OVERLAY CÁMARA EN VIVO ── -->
+<div class="cam-overlay" id="cam-overlay">
+  <div class="cam-top">
+    <span class="t">Escanear código</span>
+    <button id="cam-cerrar">Cerrar</button>
+  </div>
+  <div class="cam-view">
+    <video id="cam-video" playsinline muted></video>
+    <div id="cam-lib" style="display:none"></div>
+    <div class="cam-marco"></div>
+    <div class="cam-hint" id="cam-hint">Apunta al código de barras</div>
+    <div class="cam-toast" id="cam-toast"></div>
+
+    <div class="cam-confirm" id="cam-confirm">
+      <div class="lbl">✓ Código leído</div>
+      <div class="cod" id="cam-cod">—</div>
+      <div class="cam-cant-row">
+        <span class="lab">Cantidad</span>
+        <div class="cam-cant-ctrl">
+          <button id="cam-menos">−</button>
+          <input id="cam-cant" type="number" value="1" min="1" inputmode="numeric">
+          <button id="cam-mas">+</button>
+        </div>
+      </div>
+      <div class="cam-acc">
+        <button class="conf" id="cam-confirm-btn">✓ Confirmar</button>
+        <button class="otro" id="cam-otro">Escanear otro</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════════════════
-//  CONFIGURACIÓN — cambia esta URL por la de tu Web App
+//  CONFIGURACIÓN — URL de tu Web App (sin cambios)
 // ═══════════════════════════════════════════════════════════
 var API_URL = 'https://script.google.com/a/macros/importadoramc.cl/s/AKfycbycAyw8hofk21krVQUqvUiaVIQshDs-exVjj8NrDh1JRE26CiP6p-3Zp91l7Kz4l5Na6w/exec';
 
@@ -466,11 +311,19 @@ var API_URL = 'https://script.google.com/a/macros/importadoramc.cl/s/AKfycbycAyw
 // ═══════════════════════════════════════════════════════════
 var pedidoActual  = null;
 var itemsActuales = [];
+
+// Cámara
 var html5QrCode   = null;
-var camaraActiva  = false;
+var camStream     = null;
+var camEscaneando = false;
+var camDetector   = null;
+var camModo       = null;   // 'nativo' | 'lib'
+var camCodigo     = null;
+var audioCtx      = null;
+var FORMATOS = ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','codabar','qr_code'];
 
 // ═══════════════════════════════════════════════════════════
-//  API HELPER
+//  API HELPER (sin cambios)
 // ═══════════════════════════════════════════════════════════
 function api(params) {
   var qs = Object.keys(params).map(function(k) {
@@ -484,9 +337,7 @@ function api(params) {
 //  PANTALLAS
 // ═══════════════════════════════════════════════════════════
 function mostrarPantalla(id) {
-  document.querySelectorAll('.screen').forEach(function(s) {
-    s.classList.add('hidden');
-  });
+  document.querySelectorAll('.screen').forEach(function(s) { s.classList.add('hidden'); });
   document.getElementById(id).classList.remove('hidden');
 }
 
@@ -515,14 +366,9 @@ function cargarPedidos() {
         '</div>';
       }).join('');
 
-      // Bind clicks
       lista.querySelectorAll('.pedido-card').forEach(function(card) {
         card.addEventListener('click', function() {
-          abrirPicking(
-            card.getAttribute('data-id'),
-            card.getAttribute('data-doc'),
-            card.getAttribute('data-cli')
-          );
+          abrirPicking(card.getAttribute('data-id'), card.getAttribute('data-doc'), card.getAttribute('data-cli'));
         });
       });
     })
@@ -545,9 +391,7 @@ function abrirPicking(id, doc, cli) {
   document.getElementById('scanner-box').style.display = 'block';
   mostrarPantalla('screen-picking');
   cargarItems(id);
-  setTimeout(function() {
-    document.getElementById('input-codigo').focus();
-  }, 300);
+  setTimeout(function() { document.getElementById('input-codigo').focus(); }, 300);
 }
 
 function cargarItems(id) {
@@ -592,27 +436,28 @@ function renderItems() {
 }
 
 function actualizarProgreso() {
-  var total    = itemsActuales.length;
+  var total     = itemsActuales.length;
   var completos = itemsActuales.filter(function(i) { return i.completado; }).length;
-  var pct      = total > 0 ? Math.round(completos / total * 100) : 0;
+  var pct       = total > 0 ? Math.round(completos / total * 100) : 0;
   document.getElementById('prog-fill').style.width = pct + '%';
-  document.getElementById('prog-txt').textContent =
-    completos + ' de ' + total + ' ítems (' + pct + '%)';
+  document.getElementById('prog-txt').textContent = completos + ' de ' + total + ' ítems (' + pct + '%)';
 }
 
 // ═══════════════════════════════════════════════════════════
-//  VALIDAR CÓDIGO
+//  VALIDAR CÓDIGO — ahora acepta (codigo, cantidad) opcionales.
+//  Sin argumentos = modo manual / pistola (lee los inputs).
+//  Devuelve la promesa con la respuesta del backend.
 // ═══════════════════════════════════════════════════════════
-function validarCodigo() {
-  var codigo  = document.getElementById('input-codigo').value.trim();
-  if (!codigo) return;
-  var cantidad = parseInt(document.getElementById('input-cantidad').value, 10) || 1;
+function validarCodigo(codigoArg, cantidadArg) {
+  var codigo = (codigoArg != null ? String(codigoArg) : document.getElementById('input-codigo').value).trim();
+  if (!codigo) return Promise.resolve(null);
+  var cantidad = cantidadArg != null ? cantidadArg : (parseInt(document.getElementById('input-cantidad').value, 10) || 1);
 
   var btn = document.getElementById('btn-validar');
   btn.disabled = true;
   btn.textContent = 'Validando...';
 
-  api({ action: 'picking', id: pedidoActual, codigo: codigo, cantidad: cantidad })
+  return api({ action: 'picking', id: pedidoActual, codigo: codigo, cantidad: cantidad })
     .then(function(res) {
       btn.disabled = false;
       btn.textContent = 'Validar';
@@ -629,12 +474,15 @@ function validarCodigo() {
       } else {
         if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
       }
-      document.getElementById('input-codigo').focus();
+      if (!camaraAbierta()) document.getElementById('input-codigo').focus();
+      return res;
     })
     .catch(function(err) {
       btn.disabled = false;
       btn.textContent = 'Validar';
-      mostrarFeedback({ ok: false, mensaje: 'Error de red: ' + err.message });
+      var r = { ok: false, mensaje: 'Error de red: ' + err.message };
+      mostrarFeedback(r);
+      return r;
     });
 }
 
@@ -650,9 +498,9 @@ function actualizarItemLocal(codigo, nuevaCantidad, total) {
 function mostrarFeedback(res) {
   var fb = document.getElementById('feedback');
   fb.className = 'feedback';
-  fb.textContent = res.mensaje || '';
-  if (res.ok) fb.classList.add('ok');
-  else if (res.mensaje && res.mensaje.indexOf('⚠️') > -1) fb.classList.add('warn');
+  fb.textContent = res && res.mensaje ? res.mensaje : '';
+  if (res && res.ok) fb.classList.add('ok');
+  else if (res && res.mensaje && res.mensaje.indexOf('⚠️') > -1) fb.classList.add('warn');
   else fb.classList.add('error');
   clearTimeout(fb._t);
   fb._t = setTimeout(function() { fb.className = 'feedback'; }, 3500);
@@ -662,86 +510,190 @@ function mostrarCierre() {
   document.getElementById('cierre').className = 'cierre show';
   document.getElementById('scanner-box').style.display = 'none';
 
-  // Notificar a la ventana padre (app MC Logística) que el picking terminó
+  // Notificar a la ventana padre (app MC Logística) y cerrar pestaña → volver a packing
   if (window.opener && !window.opener.closed) {
-    window.opener.postMessage(
-      { tipo: 'picking_completo', idPedido: pedidoActual },
-      '*'
-    );
-    // Cerrar esta pestaña después de 3 segundos
-    setTimeout(function() {
-      window.close();
-    }, 3000);
+    window.opener.postMessage({ tipo: 'picking_completo', idPedido: pedidoActual }, '*');
+    setTimeout(function() { window.close(); }, 3000);
   }
 }
 
 // ═══════════════════════════════════════════════════════════
-//  CÁMARA con html5-qrcode
+//  ESCÁNER EN VIVO  (BarcodeDetector nativo + respaldo html5-qrcode)
 // ═══════════════════════════════════════════════════════════
-function abrirCamara() {
-  if (camaraActiva) { cerrarCamara(); return; }
+function camaraAbierta() { return document.getElementById('cam-overlay').classList.contains('show'); }
 
+function beep() {
+  if (!audioCtx) return;
+  try {
+    var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = 'square'; o.frequency.value = 880; g.gain.value = 0.12;
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + 0.15);
+  } catch (e) {}
+}
+
+function abrirCamara() {
+  // AudioContext debe iniciarse tras un gesto del usuario (este clic)
+  if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+
+  document.getElementById('cam-overlay').classList.add('show');
+  document.getElementById('cam-confirm').classList.remove('show');
+  ocultarToastCam();
+  iniciarScanner();
+}
+
+function iniciarScanner() {
+  if ('BarcodeDetector' in window) {
+    BarcodeDetector.getSupportedFormats().then(function(sop) {
+      var usar = FORMATOS.filter(function(x) { return sop.indexOf(x) !== -1; });
+      camDetector = new BarcodeDetector({ formats: usar });
+      return navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }, audio: false });
+    }).then(function(s) {
+      camStream = s;
+      var v = document.getElementById('cam-video');
+      v.style.display = 'block';
+      document.getElementById('cam-lib').style.display = 'none';
+      v.srcObject = s;
+      return v.play();
+    }).then(function() {
+      camModo = 'nativo';
+      camEscaneando = true;
+      requestAnimationFrame(loopNativo);
+    }).catch(function(e) {
+      usarFallbackLib(e);
+    });
+  } else {
+    usarFallbackLib(null);
+  }
+}
+
+function loopNativo() {
+  if (!camEscaneando || !camDetector) return;
+  var v = document.getElementById('cam-video');
+  camDetector.detect(v).then(function(cods) {
+    if (!camEscaneando) return;
+    if (cods && cods.length) onDetectarCamara(cods[0].rawValue);
+    else requestAnimationFrame(loopNativo);
+  }).catch(function() {
+    if (camEscaneando) requestAnimationFrame(loopNativo);
+  });
+}
+
+function usarFallbackLib(errPrevio) {
+  detenerStreamNativo();
   if (typeof Html5Qrcode === 'undefined') {
-    mostrarFeedback({ ok: false, mensaje: '⚠️ Librería de cámara no disponible. Recarga la página.' });
+    toastCam({ ok: false, mensaje: '⚠️ No se pudo abrir la cámara. Revisa el permiso.' });
     return;
   }
+  document.getElementById('cam-video').style.display = 'none';
+  var cont = document.getElementById('cam-lib');
+  cont.style.display = 'block';
+  cont.innerHTML = '';
 
-  var wrap   = document.getElementById('camara-wrap');
-  var btnCam = document.getElementById('btn-camara');
-
-  // Limpiar contenedor
-  document.getElementById('camara-container').innerHTML = '';
-
-  wrap.classList.add('show');
-  btnCam.classList.add('activa');
-
-  html5QrCode = new Html5Qrcode('camara-container');
-
-  html5QrCode.start(
-    { facingMode: 'environment' },
-    {
-      fps: 15,
-      qrbox: { width: 250, height: 150 },
-      formatsToSupport: [
-        Html5QrcodeSupportedFormats.CODE_128,
-        Html5QrcodeSupportedFormats.CODE_39,
-        Html5QrcodeSupportedFormats.EAN_13,
-        Html5QrcodeSupportedFormats.EAN_8,
-        Html5QrcodeSupportedFormats.UPC_A,
-        Html5QrcodeSupportedFormats.UPC_E,
-        Html5QrcodeSupportedFormats.QR_CODE
-      ]
-    },
-    function onSuccess(decoded) {
-      document.getElementById('input-codigo').value = decoded;
-      cerrarCamara();
-      if (navigator.vibrate) navigator.vibrate([80]);
-      setTimeout(validarCodigo, 150);
-    },
-    function onError() {}
+  var fmts = [];
+  if (typeof Html5QrcodeSupportedFormats !== 'undefined') {
+    fmts = [Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.CODE_39,
+      Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8,
+      Html5QrcodeSupportedFormats.UPC_A, Html5QrcodeSupportedFormats.UPC_E,
+      Html5QrcodeSupportedFormats.ITF, Html5QrcodeSupportedFormats.CODABAR,
+      Html5QrcodeSupportedFormats.QR_CODE];
+  }
+  html5QrCode = new Html5Qrcode('cam-lib');
+  html5QrCode.start({ facingMode: 'environment' },
+    { fps: 15, qrbox: { width: 260, height: 160 }, formatsToSupport: fmts },
+    function(decoded) { onDetectarCamara(decoded); },
+    function() {}
   ).then(function() {
-    camaraActiva = true;
+    camModo = 'lib';
+    camEscaneando = true;
   }).catch(function(err) {
-    cerrarCamara();
     var msg = '⚠️ No se pudo acceder a la cámara.';
     var s = String(err).toLowerCase();
     if (s.indexOf('notallowed') > -1 || s.indexOf('denied') > -1) {
-      msg = '📵 Permiso de cámara denegado. Toca el 🔒 en la barra de URL → Cámara → Permitir.';
+      msg = '📵 Permiso de cámara denegado. Tócalo en el 🔒 de la barra de URL.';
     }
-    mostrarFeedback({ ok: false, mensaje: msg });
+    toastCam({ ok: false, mensaje: msg });
+  });
+}
+
+function onDetectarCamara(codigo) {
+  if (!camEscaneando) return;
+  camEscaneando = false;
+  beep();
+  if (navigator.vibrate) navigator.vibrate(120);
+  if (camModo === 'lib' && html5QrCode) { try { html5QrCode.pause(true); } catch (e) {} }
+
+  camCodigo = codigo;
+  document.getElementById('cam-cod').textContent = codigo;
+  document.getElementById('cam-cant').value = 1;
+  document.getElementById('cam-confirm').classList.add('show');
+}
+
+function reanudarScanner() {
+  document.getElementById('cam-confirm').classList.remove('show');
+  if (camModo === 'lib' && html5QrCode) {
+    try { html5QrCode.resume(); } catch (e) {}
+    camEscaneando = true;
+  } else {
+    camEscaneando = true;
+    requestAnimationFrame(loopNativo);
+  }
+}
+
+function confirmarCamara() {
+  var cant = parseInt(document.getElementById('cam-cant').value, 10) || 1;
+  if (cant < 1) cant = 1;
+  var codigo = camCodigo;
+  var b = document.getElementById('cam-confirm-btn');
+  b.disabled = true; b.textContent = 'Validando...';
+
+  validarCodigo(codigo, cant).then(function(res) {
+    b.disabled = false; b.textContent = '✓ Confirmar';
+    toastCam(res);
+    if (res && res.ok && res.pedidoCompleto) {
+      cerrarCamara();   // el cierre + postMessage + window.close lo maneja mostrarCierre()
+    } else {
+      reanudarScanner(); // seguir escaneando el siguiente ítem
+    }
   });
 }
 
 function cerrarCamara() {
-  if (html5QrCode && camaraActiva) {
-    html5QrCode.stop().catch(function() {}).finally(function() {
-      html5QrCode = null;
-    });
+  camEscaneando = false;
+  detenerStreamNativo();
+  if (html5QrCode) {
+    try {
+      html5QrCode.stop().catch(function() {}).finally(function() {
+        try { html5QrCode.clear(); } catch (e) {}
+        html5QrCode = null;
+      });
+    } catch (e) { html5QrCode = null; }
   }
-  camaraActiva = false;
-  document.getElementById('camara-wrap').classList.remove('show');
-  document.getElementById('btn-camara').classList.remove('activa');
+  document.getElementById('cam-overlay').classList.remove('show');
+  document.getElementById('cam-confirm').classList.remove('show');
+  ocultarToastCam();
+  camModo = null;
 }
+
+function detenerStreamNativo() {
+  if (camStream) { camStream.getTracks().forEach(function(t) { t.stop(); }); camStream = null; }
+  var v = document.getElementById('cam-video');
+  if (v) v.srcObject = null;
+}
+
+function toastCam(res) {
+  var t = document.getElementById('cam-toast');
+  t.className = 'cam-toast';
+  if (!res) return;
+  t.textContent = res.mensaje || (res.ok ? 'OK' : 'Error');
+  if (res.ok) t.classList.add('ok');
+  else if (res.mensaje && res.mensaje.indexOf('⚠️') > -1) t.classList.add('warn');
+  else t.classList.add('error');
+  clearTimeout(t._t);
+  t._t = setTimeout(ocultarToastCam, 2600);
+}
+function ocultarToastCam() { document.getElementById('cam-toast').className = 'cam-toast'; }
 
 // ═══════════════════════════════════════════════════════════
 //  BIND EVENTOS
@@ -753,8 +705,7 @@ document.getElementById('btn-volver').addEventListener('click', function() {
   cargarPedidos();
 });
 document.getElementById('btn-camara').addEventListener('click', abrirCamara);
-document.getElementById('btn-cerrar-cam').addEventListener('click', cerrarCamara);
-document.getElementById('btn-validar').addEventListener('click', validarCodigo);
+document.getElementById('btn-validar').addEventListener('click', function() { validarCodigo(); });
 document.getElementById('btn-nuevo-picking').addEventListener('click', function() {
   mostrarPantalla('screen-pedidos');
   cargarPedidos();
@@ -771,6 +722,19 @@ document.getElementById('cant-mas').addEventListener('click', function() {
   i.value = Math.min(9999, parseInt(i.value, 10) + 1);
 });
 
+// Overlay cámara
+document.getElementById('cam-cerrar').addEventListener('click', cerrarCamara);
+document.getElementById('cam-confirm-btn').addEventListener('click', confirmarCamara);
+document.getElementById('cam-otro').addEventListener('click', reanudarScanner);
+document.getElementById('cam-menos').addEventListener('click', function() {
+  var i = document.getElementById('cam-cant');
+  i.value = Math.max(1, (parseInt(i.value, 10) || 1) - 1);
+});
+document.getElementById('cam-mas').addEventListener('click', function() {
+  var i = document.getElementById('cam-cant');
+  i.value = (parseInt(i.value, 10) || 1) + 1;
+});
+
 // ═══════════════════════════════════════════════════════════
 //  INICIO — leer parámetros de la URL
 // ═══════════════════════════════════════════════════════════
@@ -780,20 +744,16 @@ document.getElementById('cant-mas').addEventListener('click', function() {
   var pedidoDoc = params.get('doc');
 
   if (pedidoId) {
-    // Vino con pedido preseleccionado — ir directo al picking
-    // Mostrar pantalla de picking inmediatamente
     mostrarPantalla('screen-picking');
     document.getElementById('pick-doc').textContent = pedidoDoc || pedidoId;
     document.getElementById('pick-cli').textContent = 'Cargando...';
     pedidoActual = pedidoId;
 
-    // Cargar detalle del pedido
     api({ action: 'detalle', id: pedidoId })
       .then(function(items) {
         itemsActuales = items || [];
         renderItems();
         actualizarProgreso();
-        // Actualizar cliente desde la lista
         api({ action: 'pedidos' }).then(function(pedidos) {
           var p = (pedidos || []).filter(function(x) { return x.id === pedidoId; })[0];
           if (p) document.getElementById('pick-cli').textContent = p.cliente;
@@ -804,12 +764,9 @@ document.getElementById('cant-mas').addEventListener('click', function() {
           '<div class="empty"><div class="icon">⚠️</div><div class="titulo">Error</div><div class="sub">' + err.message + '</div></div>';
       });
   } else {
-    // Sin pedido — mostrar lista normal
     cargarPedidos();
   }
 })();
-
-cargarPedidos;
 </script>
 </body>
 </html>
