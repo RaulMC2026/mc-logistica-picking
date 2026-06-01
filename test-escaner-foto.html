@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Prueba escáner por foto — MC Logística</title>
+<!-- Respaldo si BarcodeDetector no está disponible (ej. iOS Safari) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<style>
+  :root{
+    --accent:#1d4ed8; --accent-bg:#eff6ff; --txt:#101828; --txt2:#475467;
+    --txt3:#98a2b3; --border:#e4e7ec; --ok:#027a48; --ok-bg:#ecfdf3;
+    --bad:#b42318; --bad-bg:#fef3f2; --radius:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:'DM Sans',system-ui,sans-serif;}
+  body{background:#f4f5f7;color:var(--txt);padding:18px;max-width:520px;margin:0 auto;}
+  h1{font-size:17px;margin-bottom:2px;}
+  .sub{font-size:12px;color:var(--txt3);margin-bottom:16px;}
+  .btn-scan{
+    width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
+    padding:18px;font-size:17px;font-weight:700;color:#fff;background:var(--accent);
+    border:none;border-radius:var(--radius);cursor:pointer;
+    box-shadow:0 2px 6px rgba(29,78,216,.3);
+  }
+  .btn-scan:active{transform:scale(.985);}
+  .estado{margin-top:16px;padding:14px;border-radius:var(--radius);font-size:14px;
+    background:#fff;border:1px solid var(--border);min-height:54px;
+    display:flex;align-items:center;gap:10px;}
+  .estado.ok{background:var(--ok-bg);border-color:#a6e9c3;color:var(--ok);}
+  .estado.bad{background:var(--bad-bg);border-color:#fbc8c2;color:var(--bad);}
+  .codigo{font-family:'DM Mono',monospace;font-weight:700;font-size:20px;letter-spacing:.5px;}
+  .lista{margin-top:18px;}
+  .lista h2{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--txt3);margin-bottom:8px;}
+  .item{display:flex;justify-content:space-between;padding:10px 12px;background:#fff;
+    border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:13px;}
+  .item .c{font-family:'DM Mono',monospace;font-weight:600;}
+  .item .m{font-size:11px;color:var(--txt3);}
+  .diag{margin-top:20px;font-size:11px;color:var(--txt3);line-height:1.6;
+    background:#fff;border:1px dashed var(--border);border-radius:8px;padding:10px 12px;}
+  #reader-tmp{display:none;}
+</style>
+</head>
+<body>
+
+<h1>Escáner por foto</h1>
+<div class="sub">Prueba de lectura de código de barras desde una foto — sin video en vivo</div>
+
+<button class="btn-scan" id="btnScan">📷 Escanear código</button>
+<input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none">
+
+<div class="estado" id="estado">Toca el botón y enfoca un código de barras.</div>
+
+<div class="lista">
+  <h2>Últimos leídos</h2>
+  <div id="lista"></div>
+</div>
+
+<div class="diag" id="diag">Cargando diagnóstico…</div>
+
+<div id="reader-tmp"></div>
+
+<script>
+(function(){
+  var btn   = document.getElementById('btnScan');
+  var file  = document.getElementById('fileInput');
+  var estado= document.getElementById('estado');
+  var lista = document.getElementById('lista');
+  var diag  = document.getElementById('diag');
+
+  // Formatos que nos interesan (códigos de producto Bsale + QR)
+  var FORMATOS = ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','codabar','qr_code'];
+
+  btn.addEventListener('click', function(){ file.value=''; file.click(); });
+
+  file.addEventListener('change', function(){
+    if(!file.files || !file.files[0]) return;
+    setEstado('','⏳ Leyendo imagen…');
+    procesar(file.files[0]);
+  });
+
+  function procesar(f){
+    decodificarNativo(f).then(function(txt){
+      if(txt){ exito(txt,'nativo'); return; }
+      decodificarLib(f).then(function(txt2){
+        if(txt2) exito(txt2,'html5-qrcode');
+        else fallo();
+      });
+    });
+  }
+
+  // 1) BarcodeDetector nativo (Chrome Android) — sobre la foto, no video
+  function decodificarNativo(f){
+    return new Promise(function(resolve){
+      if(!('BarcodeDetector' in window)){ resolve(null); return; }
+      BarcodeDetector.getSupportedFormats().then(function(sop){
+        var usar = FORMATOS.filter(function(x){ return sop.indexOf(x)!==-1; });
+        if(!usar.length){ resolve(null); return; }
+        var det = new BarcodeDetector({formats:usar});
+        createImageBitmap(f).then(function(bmp){
+          det.detect(bmp).then(function(cods){
+            resolve(cods && cods.length ? cods[0].rawValue : null);
+          }).catch(function(){ resolve(null); });
+        }).catch(function(){ resolve(null); });
+      }).catch(function(){ resolve(null); });
+    });
+  }
+
+  // 2) Respaldo: html5-qrcode scanFile (usa ZXing, decodifica un archivo)
+  function decodificarLib(f){
+    return new Promise(function(resolve){
+      if(typeof Html5Qrcode==='undefined'){ resolve(null); return; }
+      var fmts=[];
+      if(typeof Html5QrcodeSupportedFormats!=='undefined'){
+        fmts=[Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.UPC_A,Html5QrcodeSupportedFormats.UPC_E,
+          Html5QrcodeSupportedFormats.CODE_128,Html5QrcodeSupportedFormats.CODE_39,
+          Html5QrcodeSupportedFormats.ITF,Html5QrcodeSupportedFormats.CODABAR,
+          Html5QrcodeSupportedFormats.QR_CODE];
+      }
+      try{
+        var h=new Html5Qrcode("reader-tmp",{formatsToSupport:fmts,verbose:false});
+        h.scanFile(f,false)
+          .then(function(txt){ resolve(txt); })
+          .catch(function(){ resolve(null); })
+          .then(function(){ try{h.clear();}catch(e){} });
+      }catch(e){ resolve(null); }
+    });
+  }
+
+  function exito(txt,metodo){
+    if(navigator.vibrate) navigator.vibrate(80);
+    setEstado('ok','✓ Código leído: <span class="codigo">'+txt+'</span>');
+    var it=document.createElement('div');
+    it.className='item';
+    it.innerHTML='<span class="c">'+txt+'</span><span class="m">'+metodo+'</span>';
+    lista.insertBefore(it,lista.firstChild);
+    // En la app real, aquí llamarías a tu validarCodigo(txt)
+  }
+  function fallo(){
+    setEstado('bad','✗ No se pudo leer. Acerca más el código, evita reflejos o ingrésalo manual.');
+  }
+  function setEstado(cls,html){
+    estado.className='estado'+(cls?' '+cls:'');
+    estado.innerHTML=html;
+  }
+
+  // Diagnóstico de capacidades del dispositivo
+  if('BarcodeDetector' in window){
+    BarcodeDetector.getSupportedFormats().then(function(s){
+      diag.innerHTML='BarcodeDetector nativo: <b>disponible</b><br>Formatos: '+s.join(', ');
+    });
+  } else {
+    diag.innerHTML='BarcodeDetector nativo: <b>no disponible</b> — se usará html5-qrcode como respaldo.';
+  }
+})();
+</script>
+</body>
+</html>
