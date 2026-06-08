@@ -311,6 +311,8 @@
 // ═══════════════════════════════════════════════════════════
 var API_URL = 'https://script.google.com/a/macros/importadoramc.cl/s/AKfycbycAyw8hofk21krVQUqvUiaVIQshDs-exVjj8NrDh1JRE26CiP6p-3Zp91l7Kz4l5Na6w/exec';
 
+  var USUARIO =
+  localStorage.getItem('usuarioPicking') || '';
 // ═══════════════════════════════════════════════════════════
 //  ESTADO GLOBAL
 // ═══════════════════════════════════════════════════════════
@@ -331,6 +333,9 @@ var FORMATOS = ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','cod
 //  API HELPER (sin cambios)
 // ═══════════════════════════════════════════════════════════
 function api(params) {
+
+  params.usuario = USUARIO;
+  
   var qs = Object.keys(params).map(function(k) {
     return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
   }).join('&');
@@ -606,7 +611,22 @@ function usarFallbackLib(errPrevio) {
   html5QrCode.start({ facingMode: 'environment' },
     { fps: 15, qrbox: { width: 260, height: 160 }, formatsToSupport: fmts },
     function(decoded) { onDetectarCamara(decoded); },
-    function() {}
+    function() {
+      if (!USUARIO) {
+
+  USUARIO = prompt(
+    'Ingrese su correo corporativo'
+  );
+
+  if (USUARIO) {
+
+    localStorage.setItem(
+      'usuarioPicking',
+      USUARIO.trim()
+    );
+
+  }
+}
   ).then(function() {
     camModo = 'lib';
     camEscaneando = true;
